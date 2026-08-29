@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mercy Fason - Sistema de Gestión de Salón</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="./assets/css/output.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        .modal-enter-active .modal-content, .modal-leave-active .modal-content { transition: all 0.3s ease; }
+        .modal-enter-from .modal-content, .modal-leave-to .modal-content { transform: scale(0.95) translateY(-20px); opacity: 0; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        [v-cloak] { display: none; }
+        @media (max-width: 640px) {
+            .modal-content form .grid-cols-2, .modal-content form .grid-cols-3 { grid-template-columns: 1fr !important; }
+            td button.w-8.h-8 { width: 2.5rem !important; height: 2.5rem !important; display: inline-flex !important; align-items: center; justify-content: center; }
+            .mobile-flex-wrap { flex-wrap: wrap; width: 100%; }
+            .mobile-flex-wrap > button { flex-grow: 1; justify-content: center; }
+            .mobile-full-btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased overflow-hidden">
+
+<div id="app" v-cloak class="h-[100dvh] w-screen flex flex-col bg-slate-50 relative">
+
+    <div v-if="cargandoSistema" class="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center">
+        <i class="fa-solid fa-circle-notch fa-spin text-5xl text-brand-500 mb-4"></i>
+        <h2 class="text-xl font-medium text-slate-700">Preparando tu espacio.</h2>
+        <p class="text-sm text-slate-500 mt-2 text-center px-4 max-w-md" v-if="mensajeSistema">{{ mensajeSistema }}</p>
+    </div>
+
+    <!-- PANTALLA MODULARIZADA DE LOGIN -->
+    <login-view v-if="!sesionIniciada && !cargandoSistema" @login-exitoso="cargarInformacionBaseDatos"></login-view>
+
+    <!-- Interfaz Principal del Sistema -->
+    <div v-if="sesionIniciada && !cargandoSistema" class="flex flex-1 overflow-hidden">
+        
+        <!-- Menú de Navegación Lateral -->
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 z-20 flex-shrink-0" :class="{'translate-x-0': menuLateralAbierto, '-translate-x-full absolute md:relative md:translate-x-0': !menuLateralAbierto}">
+            <div class="h-16 flex items-center justify-center border-b border-slate-100 px-6">
+                <div class="flex items-center text-brand-500 text-xl font-bold">
+                    <i class="fa-solid fa-spa mr-2"></i> Mercy Fason
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                <a href="#" @click.prevent="irAVista('dashboard')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'dashboard' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                    <i class="fa-solid fa-chart-pie w-6 text-center mr-2" :class="vistaActual === 'dashboard' ? 'text-brand-500' : 'text-slate-400'"></i> Dashboard
+                </a>
+                
+                <div class="pt-4 pb-2">
+                    <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Gestión Operativa</p>
+                </div>
+                
+                <a href="#" @click.prevent="irAVista('turnos')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'turnos' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                    <i class="fa-regular fa-calendar-check w-6 text-center mr-2" :class="vistaActual === 'turnos' ? 'text-brand-500' : 'text-slate-400'"></i> Turnos
+                </a>
+                <a href="#" @click.prevent="irAVista('servicios')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'servicios' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                    <i class="fa-solid fa-scissors w-6 text-center mr-2" :class="vistaActual === 'servicios' ? 'text-brand-500' : 'text-slate-400'"></i> Servicios
+                </a>
+                <a href="#" @click.prevent="irAVista('pagos')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'pagos' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                    <i class="fa-solid fa-money-bill-wave w-6 text-center mr-2" :class="vistaActual === 'pagos' ? 'text-brand-500' : 'text-slate-400'"></i> Pagos
+                </a>
+                
+                <template v-if="usuarioActual?.rol !== 'staff'">
+                    <a href="#" @click.prevent="irAVista('clientes')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'clientes' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                        <i class="fa-solid fa-users w-6 text-center mr-2" :class="vistaActual === 'clientes' ? 'text-brand-500' : 'text-slate-400'"></i> Clientes
+                    </a>
+                </template>
+                
+                <template v-if="usuarioActual?.rol === 'admin'">
+                    <a href="#" @click.prevent="irAVista('reportes')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors mt-2', vistaActual === 'reportes' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                        <i class="fa-solid fa-chart-line w-6 text-center mr-2" :class="vistaActual === 'reportes' ? 'text-brand-500' : 'text-slate-400'"></i> Reportes
+                    </a>
+                    <div class="pt-4 pb-2">
+                        <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider">Administración</p>
+                    </div>
+                    <a href="#" @click.prevent="irAVista('empleados')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'empleados' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                        <i class="fa-solid fa-user-tie w-6 text-center mr-2" :class="vistaActual === 'empleados' ? 'text-brand-500' : 'text-slate-400'"></i> Empleados
+                    </a>
+                    <a href="#" @click.prevent="irAVista('usuarios')" :class="['flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors', vistaActual === 'usuarios' ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900']">
+                        <i class="fa-solid fa-shield-halved w-6 text-center mr-2" :class="vistaActual === 'usuarios' ? 'text-brand-500' : 'text-slate-400'"></i> Usuarios (Accesos)
+                    </a>
+                </template>
+            </div>
+            
+            <div class="p-4 border-t border-slate-200">
+                <button @click="cerrarSesion" class="flex items-center w-full px-3 py-2.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-right-from-bracket w-6 text-center mr-2"></i> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área de Contenido Central -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <!-- Barra Superior (Encabezado) -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 z-10 flex-shrink-0">
+                <button @click="menuLateralAbierto = !menuLateralAbierto" class="md:hidden p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <div class="flex-1"></div>
+                
+                <!-- Estado de conexión y Perfil -->
+                <div class="flex items-center space-x-4">
+                    <div class="hidden sm:flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-200">
+                        <i class="fa-solid fa-circle text-[8px] mr-1.5 animate-pulse"></i> En línea y conectado
+                    </div>
+                    
+                    <div class="flex items-center space-x-3 border-l border-slate-200 pl-4">
+                        <div class="hidden sm:block text-right">
+                            <div class="text-sm font-medium text-slate-700">{{ usuarioActual?.nombre }}</div>
+                            <div class="text-xs text-slate-500 capitalize">{{ usuarioActual?.rol }}</div>
+                        </div>
+                        <div class="h-9 w-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold border border-brand-200">
+                            {{ usuarioActual?.nombre?.charAt(0) || 'U' }}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto relative bg-slate-50 flex flex-col">
+                <div v-if="menuLateralAbierto" @click="menuLateralAbierto = false" class="fixed inset-0 bg-slate-900/50 z-10 md:hidden"></div>
+
+                <transition name="fade" mode="out-in">
+                    
+                    <!-- PANTALLA: INICIO (DASHBOARD) -->
+                    <div v-if="vistaActual === 'dashboard'" key="dashboard" class="flex flex-col p-4 sm:p-6 lg:p-8 space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800">¡Qué alegría verte, {{ usuarioActual?.nombre }}! 💖</h2>
+                                <p class="text-sm text-slate-500">Aquí tienes el resumen de cómo va tu salón hoy.</p>
+                            </div>
+                            <button @click="abrirVentanaEmergente('turno')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                <i class="fa-solid fa-plus"></i> Nuevo Turno
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-calendar-day"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Turnos Totales</p>
+                                    <p class="text-2xl font-bold text-slate-800">{{ baseDatos.turnos.length }}</p>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-users"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Total Clientes</p>
+                                    <p class="text-2xl font-bold text-slate-800">{{ baseDatos.clientes.length }}</p>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Ingresos Totales</p>
+                                    <p class="text-2xl font-bold text-slate-800">${{ estadisticasGenerales.ingresosTotales.toFixed(2) }}</p>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center text-xl">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Staff Activo</p>
+                                    <p class="text-2xl font-bold text-slate-800">{{ empleadosActivos.length }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 rounded-2xl overflow-hidden shadow-md relative h-48 sm:h-64 flex items-center group shrink-0">
+                            <div v-for="(anuncio, indice) in diapositivasAnuncios" :key="indice" 
+                                 class="absolute inset-0 transition-opacity duration-1000 ease-in-out flex items-center"
+                                 :class="[diapositivaActiva === indice ? 'opacity-100 z-10' : 'opacity-0 z-0', 'bg-gradient-to-r ' + anuncio.bg]">
+                                
+                                <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                                <div class="relative z-10 p-8 md:p-12 text-white max-w-2xl w-full sm:w-2/3">
+                                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold tracking-wide uppercase mb-3">
+                                        {{ anuncio.tag }}
+                                    </span>
+                                    <h3 class="text-2xl md:text-3xl font-bold mb-2">{{ anuncio.title }}</h3>
+                                    <p class="text-white/80 text-sm md:text-base">{{ anuncio.desc }}</p>
+                                </div>
+                                <div class="absolute right-0 bottom-0 h-full w-1/3 md:w-1/2 bg-cover bg-left hidden sm:block transition-transform duration-700" 
+                                     :style="{ backgroundImage: 'url(' + anuncio.img + ')', clipPath: 'polygon(15% 0, 100% 0, 100% 100%, 0 100%)' }">
+                                </div>
+                            </div>
+                            
+                            <div class="absolute bottom-4 left-0 right-0 z-20 flex justify-center space-x-2">
+                                <button v-for="(_, indice) in diapositivasAnuncios" :key="'punto-'+indice" 
+                                        @click="diapositivaActiva = indice"
+                                        class="w-2 h-2 rounded-full transition-all duration-300"
+                                        :class="diapositivaActiva === indice ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'"></button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center shrink-0">
+                                <h3 class="text-lg font-semibold text-slate-800">Últimas Atenciones</h3>
+                                <button @click="irAVista('turnos')" class="text-sm text-brand-500 hover:text-brand-600 font-medium">Ver todos</button>
+                            </div>
+                            <div class="flex-1 overflow-x-auto relative">
+                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <thead class="sticky top-0 bg-slate-50 z-10">
+                                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                            <th class="px-6 py-3 font-medium">Cliente</th>
+                                            <th class="px-6 py-3 font-medium">Empleado</th>
+                                            <th class="px-6 py-3 font-medium">Fecha/Hora</th>
+                                            <th class="px-6 py-3 font-medium">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="cita in ultimasAtenciones" :key="cita.id" class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="font-medium text-slate-800">{{ obtenerNombreRegistro('clientes', cita.cliente_id) }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-slate-600">
+                                                {{ obtenerNombreRegistro('empleados', cita.empleado_id) }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-slate-600">
+                                                {{ formatearFechaHora(cita.fecha_hora) }}
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span :class="obtenerEstiloEstado(cita.estado)">
+                                                    {{ (cita.estado || '').replace('_', ' ') }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="ultimasAtenciones.length === 0">
+                                            <td colspan="4" class="px-6 py-8 text-center text-slate-500 text-sm">Aún no hay atenciones para mostrar. ¡Seguro llegarán pronto!</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANTALLA: GESTIÓN DE TURNOS -->
+                    <div v-else-if="vistaActual === 'turnos'" key="turnos" class="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800">Gestión de Turnos</h2>
+                                <p class="text-sm text-slate-500">Administra y filtra las citas programadas.</p>
+                            </div>
+                            <div class="flex gap-2 mobile-flex-wrap">
+                                <button @click="abrirVentanaEmergente('configWsp')" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Configurar Mensaje WhatsApp">
+                                    <i class="fa-brands fa-whatsapp text-green-500"></i> <span class="hidden sm:inline">Mensaje</span>
+                                </button>
+                                <button @click="exportarArchivo('turnos', 'csv')" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a archivo de texto CSV">
+                                    <i class="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                                <button @click="exportarArchivo('turnos', 'excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a formato nativo de Excel (.xlsx)">
+                                    <i class="fa-solid fa-file-excel"></i> Excel
+                                </button>
+                                <button @click="abrirVentanaEmergente('turno')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                    <i class="fa-solid fa-plus"></i> Nuevo Turno
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Buscador y Filtros para Turnos -->
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm shrink-0 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="relative">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Buscar Cliente</label>
+                                <i class="fa-solid fa-search absolute left-3 top-7 text-slate-400"></i>
+                                <input v-model="filtrosBusqueda.turno.search" type="text" placeholder="Ej. María..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Estado</label>
+                                <select v-model="filtrosBusqueda.turno.estado" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="en_proceso">En Proceso</option>
+                                    <option value="completado">Completado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
+                                <input v-model="filtrosBusqueda.turno.fecha" type="date" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div class="flex items-end">
+                                <button @click="limpiarFiltros('turno')" class="w-full py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-eraser"></i> Limpiar Filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Grilla de Turnos (Estirada) -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm flex-1 flex flex-col min-h-[300px]">
+                            <div class="flex-1 overflow-x-auto relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/80 to-transparent pointer-events-none md:hidden z-10"></div>
+                                <table class="w-full text-left border-collapse min-w-[900px]">
+                                    <thead class="bg-slate-50 border-b border-slate-100">
+                                        <tr class="text-slate-500 text-xs uppercase tracking-wider">
+                                            <th class="px-6 py-3 font-medium">Cliente</th>
+                                            <th class="px-6 py-3 font-medium">Atendido por (Staff)</th>
+                                            <th class="px-6 py-3 font-medium">Fecha y Hora</th>
+                                            <th class="px-6 py-3 font-medium">Estado</th>
+                                            <th class="px-6 py-3 font-medium">Servicios</th>
+                                            <th class="px-6 py-3 font-medium text-right sticky right-0 bg-slate-50 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-20">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="cita in turnosFiltrados" :key="cita.id" class="hover:bg-slate-50/50 group transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="font-medium text-slate-800">{{ obtenerNombreRegistro('clientes', cita.cliente_id) }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-slate-600">
+                                                <div class="flex items-center gap-2">
+                                                    <div class="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                                                        {{ obtenerNombreRegistro('empleados', cita.empleado_id).charAt(0) }}
+                                                    </div>
+                                                    {{ obtenerNombreRegistro('empleados', cita.empleado_id) }}
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm font-medium text-slate-700">
+                                                <i class="fa-regular fa-clock text-brand-500 mr-1"></i> {{ formatearFechaHora(cita.fecha_hora) }}
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span :class="obtenerEstiloEstado(cita.estado)">
+                                                    {{ (cita.estado || '').replace('_', ' ') }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 text-xs text-slate-500 max-w-[200px]" :title="'Notas: ' + (cita.notas_internas || 'Ninguna')">
+                                                <span v-for="servicioDeCita in obtenerServiciosDeTurno(cita.id)" :key="servicioDeCita.id" class="inline-block bg-slate-100 border border-slate-200 rounded px-2 py-1 mr-1 mb-1">
+                                                    {{ servicioDeCita.nombre }}
+                                                </span>
+                                                <span v-if="obtenerServiciosDeTurno(cita.id).length === 0" class="text-slate-400 italic">Sin servicios</span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
+                                                <button @click="enviarRecordatorioWhatsApp(cita)" class="w-8 h-8 rounded bg-green-50 text-green-600 hover:bg-green-100 transition-colors mx-1" title="Enviar recordatorio por WhatsApp">
+                                                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                                                </button>
+                                                <template v-if="!turnoYaEstaPagado(cita.id)">
+                                                    <button @click="abrirVentanaEmergente('turno', cita)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
+                                                        <i class="fa-solid fa-pen text-xs"></i>
+                                                    </button>
+                                                    <button @click="pedirConfirmacionEliminar('turnos', cita.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
+                                                        <i class="fa-solid fa-trash text-xs"></i>
+                                                    </button>
+                                                </template>
+                                                <template v-else>
+                                                    <span class="inline-flex items-center px-2 py-1.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 cursor-not-allowed shadow-sm mx-1" title="Bloqueado: Este turno ya fue pagado.">
+                                                        <i class="fa-solid fa-lock mr-1.5"></i> Pagado
+                                                    </span>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="turnosFiltrados.length === 0">
+                                            <td colspan="6" class="px-6 py-12 text-center text-slate-500">
+                                                <i class="fa-regular fa-calendar-xmark text-4xl mb-3 text-slate-300"></i>
+                                                <p>Por ahora, la agenda está libre con estos filtros.</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANTALLA: GESTIÓN DE PAGOS -->
+                    <div v-else-if="vistaActual === 'pagos'" key="pagos" class="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800">Gestión de Pagos</h2>
+                                <p class="text-sm text-slate-500">Administra, filtra y exporta el historial de ingresos.</p>
+                            </div>
+                            <div class="flex gap-2 mobile-flex-wrap">
+                                <button @click="descargarPagosCSV" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a archivo de texto CSV">
+                                    <i class="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                                <button @click="descargarPagosExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a formato nativo de Excel (.xlsx)">
+                                    <i class="fa-solid fa-file-excel"></i> Excel
+                                </button>
+                                <button @click="abrirVentanaEmergente('pago')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                    <i class="fa-solid fa-plus"></i> Registrar Pago
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filtros para la vista de Pagos -->
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm shrink-0 grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div class="relative md:col-span-2">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Buscar (Cliente o Ref.)</label>
+                                <i class="fa-solid fa-search absolute left-3 top-7 text-slate-400"></i>
+                                <input v-model="filtrosBusqueda.pago.search" type="text" placeholder="Ej. María o #Boucher..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Método</label>
+                                <select v-model="filtrosBusqueda.pago.metodo" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                                    <option value="">Todos</option>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="tarjeta">Tarjeta</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="saldo_a_favor">Saldo a favor</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Desde</label>
+                                <input v-model="filtrosBusqueda.pago.fechaInicio" type="date" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+                                <input v-model="filtrosBusqueda.pago.fechaFin" type="date" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Grilla de Pagos (Estirada) -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm flex-1 flex flex-col min-h-[300px]">
+                            <div class="flex-1 overflow-x-auto relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/80 to-transparent pointer-events-none md:hidden z-10"></div>
+                                <table class="w-full text-left border-collapse min-w-[800px]">
+                                    <thead class="bg-slate-50 border-b border-slate-100">
+                                        <tr class="text-slate-500 text-xs uppercase tracking-wider">
+                                            <th class="px-6 py-3 font-medium">Turno (Cliente - Fecha)</th>
+                                            <th class="px-6 py-3 font-medium">Monto</th>
+                                            <th class="px-6 py-3 font-medium">Método</th>
+                                            <th class="px-6 py-3 font-medium">Referencia</th>
+                                            <th class="px-6 py-3 font-medium text-right sticky right-0 bg-slate-50 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-20">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="pagoRegistrado in pagosFiltrados" :key="pagoRegistrado.id" class="hover:bg-slate-50/50 group transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="font-medium text-slate-800">{{ obtenerDetalleTurno(pagoRegistrado.turno_id) }}</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm font-bold text-brand-600">
+                                                ${{ pagoRegistrado.monto }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-slate-600 capitalize">
+                                                {{ (pagoRegistrado.metodo_pago || '').replace(/_/g, ' ') }}
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-slate-600">
+                                                {{ pagoRegistrado.referencia || '-' }}
+                                            </td>
+                                            <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
+                                                <button @click="abrirVentanaEmergente('pago', pagoRegistrado)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
+                                                    <i class="fa-solid fa-pen text-xs"></i>
+                                                </button>
+                                                <button @click="pedirConfirmacionEliminar('pagos', pagoRegistrado.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
+                                                    <i class="fa-solid fa-trash text-xs"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="pagosFiltrados.length === 0">
+                                            <td colspan="5" class="px-6 py-12 text-center text-slate-500">
+                                                <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                                                <p>Aún no hay ingresos registrados con estos criterios de búsqueda.</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANTALLA: REPORTES -->
+                    <div v-else-if="vistaActual === 'reportes'" key="reportes" class="flex flex-col p-4 sm:p-6 lg:p-8 space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                            <div>
+                                <h2 class="text-2xl font-bold text-slate-800">Reportes y Estadísticas</h2>
+                                <p class="text-sm text-slate-500">Rendimiento financiero y operativo del salón.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm shrink-0 flex flex-wrap items-end gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Desde (Fecha Pago/Turno)</label>
+                                <input v-model="filtrosBusqueda.reportes.inicio" type="date" class="w-full sm:w-48 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+                                <input v-model="filtrosBusqueda.reportes.fin" type="date" class="w-full sm:w-48 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <button @click="establecerMesActual" class="py-2 px-4 text-sm text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg font-medium transition-colors">
+                                Mes Actual
+                            </button>
+                        </div>
+
+                        <!-- Tarjetas de Indicadores Clave -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+                            <div class="bg-gradient-to-br from-brand-500 to-pink-600 rounded-2xl p-6 text-white shadow-md">
+                                <h4 class="text-brand-100 text-sm font-medium mb-1">Ingresos Totales</h4>
+                                <div class="text-3xl font-bold">${{ datosReporte.totalIngresos.toFixed(2) }}</div>
+                                <div class="text-xs text-brand-100 mt-2"><i class="fa-solid fa-chart-bar mr-1"></i> En el periodo seleccionado</div>
+                            </div>
+                            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <h4 class="text-slate-500 text-sm font-medium mb-1">Turnos Completados</h4>
+                                <div class="text-3xl font-bold text-slate-800">{{ datosReporte.turnos.length }}</div>
+                                <div class="text-xs text-slate-400 mt-2">Citas finalizadas exitosamente</div>
+                            </div>
+                            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col justify-center">
+                                <h4 class="text-slate-500 text-sm font-medium mb-1">Ticket Promedio</h4>
+                                <div class="text-3xl font-bold text-slate-800">${{ datosReporte.ticketPromedio.toFixed(2) }}</div>
+                                <div class="text-xs text-slate-400 mt-2">Gasto promedio por cliente</div>
+                            </div>
+                        </div>
+
+                        <!-- Gráficos de barras estilizadas -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-[300px]">
+                            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-wallet text-brand-500 mr-2"></i> Ingresos por Método</h3>
+                                <div class="space-y-4 flex-1 overflow-y-auto pr-2">
+                                    <div v-for="metodoDePago in datosReporte.metodos" :key="metodoDePago.nombre">
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="font-medium text-slate-700 capitalize">{{ metodoDePago.nombre.replace(/_/g, ' ') }}</span>
+                                            <span class="text-slate-500">${{ metodoDePago.monto.toFixed(2) }} ({{ metodoDePago.porcentaje.toFixed(1) }}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                            <div class="bg-brand-500 h-2.5 rounded-full" :style="`width: ${metodoDePago.porcentaje}%`"></div>
+                                        </div>
+                                    </div>
+                                    <div v-if="datosReporte.metodos.length === 0" class="text-center text-slate-400 text-sm py-8">
+                                        No hemos registrado cobros todavía.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-people-group text-brand-500 mr-2"></i> Turnos por Empleado</h3>
+                                <div class="space-y-4 flex-1 overflow-y-auto pr-2">
+                                    <div v-for="infoEmpleado in datosReporte.empleados" :key="infoEmpleado.nombre">
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="font-medium text-slate-700">{{ infoEmpleado.nombre }}</span>
+                                            <span class="text-slate-500">{{ infoEmpleado.turnos }} turnos / ${{ infoEmpleado.ingresos.toFixed(2) }}</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                            <div class="bg-blue-500 h-2.5 rounded-full" :style="`width: ${(infoEmpleado.turnos / (datosReporte.maxTurnosEmp || 1)) * 100}%`"></div>
+                                        </div>
+                                    </div>
+                                    <div v-if="datosReporte.empleados.length === 0" class="text-center text-slate-400 text-sm py-8">
+                                        No hay actividad de turnos en este periodo.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex flex-col">
+                                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-fire text-orange-500 mr-2"></i> Servicios Más Solicitados</h3>
+                                <div class="space-y-4 flex-1 overflow-y-auto pr-2">
+                                    <div v-for="infoServicio in datosReporte.serviciosDemanda" :key="'demanda-'+infoServicio.nombre">
+                                        <div class="flex justify-between text-sm mb-1">
+                                            <span class="font-medium text-slate-700 truncate pr-2" :title="infoServicio.nombre">{{ infoServicio.nombre }}</span>
+                                            <span class="text-slate-500 shrink-0 font-medium">{{ infoServicio.cantidad }} <span class="text-xs font-normal text-slate-400">(${{ infoServicio.ingresos.toFixed(2) }})</span></span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                            <div class="bg-orange-400 h-2.5 rounded-full" :style="`width: ${(infoServicio.cantidad / (datosReporte.maxServiciosDemanda || 1)) * 100}%`"></div>
+                                        </div>
+                                    </div>
+                                    <div v-if="datosReporte.serviciosDemanda.length === 0" class="text-center text-slate-400 text-sm py-8">
+                                        No hemos realizado servicios en estas fechas.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de Liquidaciones -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm shrink-0 overflow-hidden mt-6">
+                            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-file-invoice-dollar text-brand-500 mr-2"></i> Liquidación y Comisiones por Empleado</h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse min-w-[700px]">
+                                    <thead>
+                                        <tr class="bg-white text-slate-500 text-xs uppercase tracking-wider border-b border-slate-100">
+                                            <th class="px-6 py-3 font-medium">Empleado</th>
+                                            <th class="px-6 py-3 font-medium text-center">Turnos Atendidos</th>
+                                            <th class="px-6 py-3 font-medium text-right">Ingresos Generados</th>
+                                            <th class="px-6 py-3 font-medium text-center">% Comisión</th>
+                                            <th class="px-6 py-3 font-medium text-right text-brand-600">Comisión a Pagar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="infoEmpleado in datosReporte.empleados" :key="'tb-'+infoEmpleado.nombre" class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-4 font-medium text-slate-800">{{ infoEmpleado.nombre }}</td>
+                                            <td class="px-6 py-4 text-center text-slate-600">{{ infoEmpleado.turnos }}</td>
+                                            <td class="px-6 py-4 text-right text-slate-600">${{ infoEmpleado.ingresos.toFixed(2) }}</td>
+                                            <td class="px-6 py-4 text-center text-slate-500">{{ infoEmpleado.porcentaje }}%</td>
+                                            <td class="px-6 py-4 text-right font-bold text-brand-600">${{ infoEmpleado.comision.toFixed(2) }}</td>
+                                        </tr>
+                                        <tr v-if="datosReporte.empleados.length === 0">
+                                            <td colspan="5" class="px-6 py-8 text-center text-slate-500 text-sm">No hay actividad de empleados en este periodo.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PANTALLAS GENÉRICAS (Clientes, Empleados, Servicios, Usuarios) -->
+                    <div v-else :key="vistaActual" class="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+                            <h2 class="text-2xl font-bold text-slate-800 capitalize">Gestión de {{ vistaActual }}</h2>
+                            <div class="flex gap-2 mobile-flex-wrap">
+                                <button @click="exportarArchivo(vistaActual, 'csv')" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a Archivo CSV">
+                                    <i class="fa-solid fa-file-csv"></i> CSV
+                                </button>
+                                <button @click="exportarArchivo(vistaActual, 'excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a Formato Excel">
+                                    <i class="fa-solid fa-file-excel"></i> Excel
+                                </button>
+                                <button @click="abrirVentanaEmergente(vistaActual.slice(0,-1))" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                    <i class="fa-solid fa-plus"></i> Nuevo Registro
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filtros del Listado Genérico -->
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm shrink-0 flex flex-wrap gap-4">
+                            <div class="relative flex-1 min-w-[200px] max-w-md">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Buscar</label>
+                                <i class="fa-solid fa-search absolute left-3 top-7 text-slate-400"></i>
+                                <input v-model="filtrosBusqueda.generic.search" type="text" placeholder="Buscar por nombre, correo o desc..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                            </div>
+                            <div class="w-48" v-if="vistaTieneCampo('activo')">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Estado</label>
+                                <select v-model="filtrosBusqueda.generic.estado" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-brand-500 focus:border-brand-500">
+                                    <option value="">Todos</option>
+                                    <option value="activo">Activos</option>
+                                    <option value="inactivo">Inactivos</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button @click="limpiarFiltros('generic')" class="py-2 px-4 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-eraser"></i> Limpiar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Grilla Dinámica de Datos (Estirada) -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm flex-1 flex flex-col min-h-[300px]">
+                            <div class="flex-1 overflow-x-auto relative">
+                                <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-100/80 to-transparent pointer-events-none md:hidden z-10"></div>
+                                <table class="w-full text-left border-collapse min-w-[800px]">
+                                    <thead class="bg-slate-50 border-b border-slate-100">
+                                        <tr class="text-slate-500 text-xs uppercase tracking-wider">
+                                            <th class="px-6 py-3 font-medium">Nombre</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('email') || vistaTieneCampo('telefono')">Contacto</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('cedula')">Identificación</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('direccion')">Dirección</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('especialidad')">Especialidad/Comisión</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('rol')">Rol</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('precio_venta') || vistaTieneCampo('precio_base')">Valor / Precio</th>
+                                            <th class="px-6 py-3 font-medium" v-if="vistaTieneCampo('activo')">Estado</th>
+                                            <th class="px-6 py-3 font-medium text-right sticky right-0 bg-slate-50 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-20">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="registroInterno in listaGenericaFiltrada" :key="registroInterno.id" class="hover:bg-slate-50/50 group transition-colors">
+                                            <td class="px-6 py-4 font-medium text-slate-800">{{ registroInterno.nombre }}</td>
+                                            
+                                            <td class="px-6 py-4 text-sm text-slate-600" v-if="vistaTieneCampo('email') || vistaTieneCampo('telefono')">
+                                                <div v-if="registroInterno.email"><i class="fa-regular fa-envelope mr-1 text-slate-400"></i>{{ registroInterno.email }}</div>
+                                                <div v-if="registroInterno.telefono"><i class="fa-solid fa-phone mr-1 text-slate-400"></i>{{ registroInterno.telefono }}</div>
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-sm text-slate-600" v-if="vistaTieneCampo('cedula')">
+                                                {{ registroInterno.cedula || '-' }}
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-sm text-slate-500" v-if="vistaTieneCampo('direccion')">
+                                                <div class="truncate max-w-[150px]" :title="registroInterno.direccion">{{ registroInterno.direccion || '-' }}</div>
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-sm text-slate-600" v-if="vistaTieneCampo('especialidad')">
+                                                {{ registroInterno.especialidad }}<br>
+                                                <span class="text-xs text-brand-600">Serv: {{registroInterno.porcentaje_comision}}% | Prod: {{registroInterno.porcentaje_comision_producto}}%</span>
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-sm" v-if="vistaTieneCampo('rol')">
+                                                <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-medium capitalize">{{ registroInterno.rol }}</span>
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-sm text-slate-600" v-if="vistaTieneCampo('precio_venta') || vistaTieneCampo('precio_base')">
+                                                <template v-if="vistaTieneCampo('precio_base')">
+                                                    Precio Base: ${{ registroInterno.precio_base }}<br>
+                                                    <span class="text-xs text-slate-400">Duración: {{ registroInterno.duracion_minutos }} min</span>
+                                                </template>
+                                            </td>
+
+                                            <td class="px-6 py-4" v-if="vistaTieneCampo('activo')">
+                                                <span v-if="registroInterno.activo" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Activo</span>
+                                                <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                                            </td>
+                                            
+                                            <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
+                                                <button @click="abrirVentanaEmergente(vistaActual.slice(0,-1), registroInterno)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
+                                                    <i class="fa-solid fa-pen text-xs"></i>
+                                                </button>
+                                                <button @click="pedirConfirmacionEliminar(vistaActual, registroInterno.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
+                                                    <i class="fa-solid fa-trash text-xs"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="listaGenericaFiltrada.length === 0">
+                                            <td :colspan="10" class="px-6 py-12 text-center text-slate-500">
+                                                <i class="fa-regular fa-folder-open text-4xl mb-3 text-slate-300"></i>
+                                                <p>Parece que aquí no hay nada todavía. ¡Anímate a agregar algo!</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+            </main>
+        </div>
+    </div>
+
+    <!-- VENTANAS EMERGENTES (MODALES) GLOBALES -->
+    <transition name="modal">
+        <div v-if="modalActivo" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
+            <!-- Fondo oscuro para cerrar al hacer clic fuera -->
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="cerrarVentanaEmergente"></div>
+            
+            <!-- Ventana de Formularios (Crear / Editar) -->
+            <div v-if="modalActivo !== 'delete' && modalActivo !== 'success'" class="modal-content relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                    <h3 class="text-lg font-semibold text-slate-800 capitalize">{{ modoEdicion ? 'Editar' : 'Registrar' }} {{ modalActivo }}</h3>
+                    <button @click="cerrarVentanaEmergente(false)" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto flex-1">
+                    <!-- Alerta de Errores en el Formulario -->
+                    <div v-if="errorFormulario" class="mb-4 bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100">
+                        <i class="fa-solid fa-triangle-exclamation mr-2"></i> {{ errorFormulario }}
+                    </div>
+
+                    <form @submit.prevent="guardarFormulario" class="space-y-4">
+                        
+                        <!-- 🔸 Campos Exclusivos para: Turno -->
+                        <template v-if="modalActivo === 'turno'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Cliente *</label>
+                                <select v-model="datosDelFormulario.cliente_id" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                    <option value="" disabled>Seleccione un cliente</option>
+                                    <option v-for="personaCliente in baseDatos.clientes" :value="personaCliente.id" :key="personaCliente.id">{{ personaCliente.nombre }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Empleado (Staff) *</label>
+                                <select v-model="datosDelFormulario.empleado_id" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" :disabled="usuarioActual?.rol === 'staff'">
+                                    <option value="" disabled>Seleccione staff</option>
+                                    <option v-for="personaEmpleado in empleadosActivos" :value="personaEmpleado.id" :key="personaEmpleado.id">{{ personaEmpleado.nombre }} - {{ personaEmpleado.especialidad }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Fecha y Hora *</label>
+                                <input v-model="datosDelFormulario.fecha_hora" type="datetime-local" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                                <select v-model="datosDelFormulario.estado" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="confirmado">Confirmado</option>
+                                    <option value="en_proceso">En Proceso</option>
+                                    <option value="completado">Completado</option>
+                                    <option value="cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Notas Internas</label>
+                                <textarea v-model="datosDelFormulario.notas_internas" rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500"></textarea>
+                            </div>
+
+                            <div class="border-t border-slate-100 pt-3 mt-3">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Servicios Realizados</label>
+                                <div class="max-h-32 overflow-y-auto space-y-2 border border-slate-200 rounded-lg p-2 bg-slate-50">
+                                    <div v-for="opcionServicio in baseDatos.servicios" :key="opcionServicio.id" class="flex items-center">
+                                        <input type="checkbox" :id="'srv-'+opcionServicio.id" :value="opcionServicio.id" v-model="datosDelFormulario.servicios_seleccionados" class="h-4 w-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                                        <label :for="'srv-'+opcionServicio.id" class="ml-2 block text-sm text-slate-900 flex-1 cursor-pointer">
+                                            {{ opcionServicio.nombre }} 
+                                            <span class="text-xs text-slate-500 ml-1">(${{ opcionServicio.precio_base }})</span>
+                                        </label>
+                                    </div>
+                                    <div v-if="baseDatos.servicios.length === 0" class="text-xs text-slate-500 p-2 text-center">No hay servicios registrados.</div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- 🔸 Campos Exclusivos para: Cliente -->
+                        <template v-if="modalActivo === 'cliente'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo *</label>
+                                <input v-model="datosDelFormulario.nombre" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Cédula / ID *</label>
+                                    <input v-model="datosDelFormulario.cedula" type="text" required minlength="10" maxlength="13" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 1101234567">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono *</label>
+                                    <input v-model="datosDelFormulario.telefono" type="tel" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 0991234567">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico (Email) *</label>
+                                    <input v-model="datosDelFormulario.email" type="email" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="cliente@ejemplo.com">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Dirección *</label>
+                                    <input v-model="datosDelFormulario.direccion" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Notas</label>
+                                <textarea v-model="datosDelFormulario.notas" rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500"></textarea>
+                            </div>
+                        </template>
+
+                        <!--🔸 Campos Exclusivos para: Empleado -->
+                        <template v-if="modalActivo === 'empleado'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo *</label>
+                                <input v-model="datosDelFormulario.nombre" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Cédula / ID *</label>
+                                    <input v-model="datosDelFormulario.cedula" type="text" required minlength="10" maxlength="13" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 1101234567">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono *</label>
+                                    <input v-model="datosDelFormulario.telefono" type="tel" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 0991234567">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Correo Electrónico *</label>
+                                    <input v-model="datosDelFormulario.email" type="email" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="empleado@ejemplo.com">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Usuario Vinculado (Login)</label>
+                                    <select v-model="datosDelFormulario.usuario_id" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                        <option :value="null">Ninguno</option>
+                                        <option v-for="usuarioExistente in baseDatos.usuarios" :value="usuarioExistente.id" :key="usuarioExistente.id">{{ usuarioExistente.nombre }} ({{ usuarioExistente.email }})</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Especialidad *</label>
+                                    <input v-model="datosDelFormulario.especialidad" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Dirección *</label>
+                                    <input v-model="datosDelFormulario.direccion" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">% Comisión Servicio</label>
+                                    <input v-model.number="datosDelFormulario.porcentaje_comision" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <input v-model="datosDelFormulario.activo" type="checkbox" id="empActivo" class="h-4 w-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                                <label for="empActivo" class="ml-2 block text-sm text-slate-900">Empleado Activo</label>
+                            </div>
+                        </template>
+
+                        <!-- 🔸 Campos Exclusivos para: Servicio -->
+                        <template v-if="modalActivo === 'servicio'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre del Servicio *</label>
+                                <input v-model="datosDelFormulario.nombre" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                                <textarea v-model="datosDelFormulario.descripcion" rows="2" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500"></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Precio Base *</label>
+                                    <input v-model.number="datosDelFormulario.precio_base" type="number" step="0.01" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Duración (min) *</label>
+                                    <input v-model.number="datosDelFormulario.duracion_minutos" type="number" min="1" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <input v-model="datosDelFormulario.activo" type="checkbox" id="srvActivo" class="h-4 w-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                                <label for="srvActivo" class="ml-2 block text-sm text-slate-900">Servicio Activo</label>
+                            </div>
+                        </template>
+
+                        <!-- 🔸 Campos Exclusivos para: Pago -->
+                        <template v-if="modalActivo === 'pago'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Turno Asociado (Solo Completados) *</label>
+                                <select v-model="datosDelFormulario.turno_id" @change="calcularTotalPago" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                    <option value="" disabled>Seleccione un turno</option>
+                                    <option v-for="citaCulminada in citasCompletadas" :value="citaCulminada.id" :key="citaCulminada.id">{{ obtenerDetalleTurno(citaCulminada.id) }}</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Servicios ($)</label>
+                                    <input :value="datosDelFormulario.monto_servicios || 0" type="number" step="0.01" readonly class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 bg-slate-50 text-slate-600 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Otros ($)</label>
+                                    <input v-model.number="datosDelFormulario.otros_pagos" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 10.00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Total ($)</label>
+                                    <input :value="(Number(datosDelFormulario.monto_servicios) || 0) + (Number(datosDelFormulario.otros_pagos) || 0)" type="number" step="0.01" readonly class="w-full px-3 py-2 border border-pink-200 rounded-lg font-bold text-pink-700 bg-pink-50 cursor-not-allowed focus:outline-none" title="El total se calcula automáticamente">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Método de Pago *</label>
+                                    <select v-model="datosDelFormulario.metodo_pago" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                        <option value="efectivo">Efectivo</option>
+                                        <option value="tarjeta">Tarjeta</option>
+                                        <option value="transferencia">Transferencia</option>
+                                        <option value="saldo_a_favor">Saldo a favor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Referencia (Opcional)</label>
+                                <input v-model="datosDelFormulario.referencia" type="text" placeholder="Nro. Transacción, Baucher..." class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                        </template>
+
+                        <!-- 🔸 Campos Exclusivos para: Usuario (Roles y Accesos) -->
+                        <template v-if="modalActivo === 'usuario'">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo *</label>
+                                <input v-model="datosDelFormulario.nombre" type="text" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                                    <input v-model="datosDelFormulario.email" type="email" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono *</label>
+                                    <input v-model="datosDelFormulario.telefono" type="tel" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500" placeholder="Ej. 0991234567">
+                                </div>
+                            </div>
+                            
+                            <!-- Contraseñas (Creación) -->
+                            <div v-if="!modoEdicion" class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña *</label>
+                                    <div class="relative">
+                                        <input v-model="datosDelFormulario.passwordapp" :type="mostrarContrasena ? 'text' : 'password'" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 pr-10">
+                                        <button type="button" @click="mostrarContrasena = !mostrarContrasena" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                            <i class="fa-regular" :class="mostrarContrasena ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Contraseña *</label>
+                                    <div class="relative">
+                                        <input v-model="datosDelFormulario.confirm_password" :type="mostrarConfirmacionContrasena ? 'text' : 'password'" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 pr-10">
+                                        <button type="button" @click="mostrarConfirmacionContrasena = !mostrarConfirmacionContrasena" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                            <i class="fa-regular" :class="mostrarConfirmacionContrasena ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Contraseñas (Edición) -->
+                            <div v-else class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nueva Contraseña</label>
+                                    <div class="relative">
+                                        <input v-model="datosDelFormulario.nueva_password" :type="mostrarContrasena ? 'text' : 'password'" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 pr-10" placeholder="Dejar blanco si no cambia">
+                                        <button type="button" @click="mostrarContrasena = !mostrarContrasena" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                            <i class="fa-regular" :class="mostrarContrasena ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
+                                    <div class="relative">
+                                        <input v-model="datosDelFormulario.confirm_password" :type="mostrarConfirmacionContrasena ? 'text' : 'password'" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 pr-10" :required="!!datosDelFormulario.nueva_password" placeholder="Repita la nueva contraseña">
+                                        <button type="button" @click="mostrarConfirmacionContrasena = !mostrarConfirmacionContrasena" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                                            <i class="fa-regular" :class="mostrarConfirmacionContrasena ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Rol *</label>
+                                <select v-model="datosDelFormulario.rol" required class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500">
+                                    <option value="admin">Administrador</option>
+                                    <option value="recepcion">Recepción</option>
+                                    <option value="staff">Staff</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <input v-model="datosDelFormulario.activo" type="checkbox" id="userActivo" class="h-4 w-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                                <label for="userActivo" class="ml-2 block text-sm text-slate-900">Usuario Activo</label>
+                            </div>
+                        </template>
+
+                        <!-- 🔸 Campos Exclusivos para: Configuración de WhatsApp -->
+                        <template v-if="modalActivo === 'configWsp'">
+                            <div class="mb-4">
+                                <p class="text-sm text-slate-500 mb-3">Personaliza el mensaje automático. Toca las siguientes etiquetas para insertarlas; el sistema las reemplazará automáticamente con la información real del cliente:</p>
+                                <div class="flex flex-wrap gap-2 mb-4">
+                                    <span class="px-2 py-1 bg-green-50 text-xs font-semibold text-green-700 border border-green-200 rounded cursor-pointer hover:bg-green-100 transition-colors" @click="insertarEtiqueta('[CLIENTE]')">[CLIENTE]</span>
+                                    <span class="px-2 py-1 bg-green-50 text-xs font-semibold text-green-700 border border-green-200 rounded cursor-pointer hover:bg-green-100 transition-colors" @click="insertarEtiqueta('[FECHA]')">[FECHA]</span>
+                                    <span class="px-2 py-1 bg-green-50 text-xs font-semibold text-green-700 border border-green-200 rounded cursor-pointer hover:bg-green-100 transition-colors" @click="insertarEtiqueta('[HORA]')">[HORA]</span>
+                                    <span class="px-2 py-1 bg-green-50 text-xs font-semibold text-green-700 border border-green-200 rounded cursor-pointer hover:bg-green-100 transition-colors" @click="insertarEtiqueta('[SERVICIOS]')">[SERVICIOS]</span>
+                                </div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Plantilla del Mensaje *</label>
+                                <textarea id="wspTextarea" v-model="datosDelFormulario.wspTemplate" rows="8" class="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm bg-slate-50" placeholder="Escribe aquí tu mensaje..."></textarea>
+                            </div>
+                        </template>
+
+                        <div class="pt-4 border-t border-slate-100 flex justify-end gap-3 mt-6 shrink-0">
+                            <button type="button" @click="cerrarVentanaEmergente(false)" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-brand-500 border border-transparent rounded-lg hover:bg-brand-600 transition-colors flex items-center gap-2" :disabled="guardandoDatos">
+                                <i v-if="guardandoDatos" class="fa-solid fa-spinner fa-spin"></i>
+                                Guardar 
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ventana de Confirmación para Eliminar Datos -->
+            <div v-if="modalActivo === 'delete'" class="modal-content relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <i class="fa-solid fa-triangle-exclamation text-xl text-red-600"></i>
+                </div>
+                <h3 class="text-lg font-medium text-slate-900 mb-2">¿Estás seguro de hacer esto?</h3>
+                <p class="text-sm text-slate-500 mb-6">Si continúas, esta información se borrará para siempre y no podremos recuperarla.</p>
+                <div v-if="errorFormulario" class="mb-4 text-red-500 text-sm font-medium">{{ errorFormulario }}</div>
+                <div class="flex justify-center gap-3">
+                    <button @click="cerrarVentanaEmergente(false)" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors w-full">
+                        Cancelar
+                    </button>
+                    <button @click="ejecutarEliminacion" class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 transition-colors w-full flex justify-center items-center gap-2" :disabled="guardandoDatos">
+                        <i v-if="guardandoDatos" class="fa-solid fa-spinner fa-spin"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ventana de Mensaje de Éxito Genérico -->
+            <div v-if="modalActivo === 'success'" class="modal-content relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 mb-4">
+                    <i class="fa-solid fa-check text-3xl text-emerald-600"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">¡Éxito!</h3>
+                <p class="text-sm text-slate-500 mb-6">{{ mensajeExito || 'La operación se realizó correctamente.' }}</p>
+                <button @click="cerrarVentanaEmergente(false)" class="w-full px-4 py-3 text-sm font-bold text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm">
+                    Continuar
+                </button>
+            </div>
+        </div>
+    </transition>
+</div>
+
+<!-- Llama a tu archivo JS externo aquí -->
+<script type="module" src="./assets/js/main.js"></script>
+
+</body>
+</html>
