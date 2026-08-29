@@ -2,8 +2,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { store } from './store.js';
 import LoginView from './views/LoginView.js';
 
-export const SUPABASE_URL = 'https://uijyqrbdkrikbmvfqdrz.supabase.co'; 
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpanlxcmJka3Jpa2JtdmZxZHJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzODI0OTAsImV4cCI6MjA5OTk1ODQ5MH0.5NLTo68u2JbGui2fLiBvvfiGDY8bC7ZYgQZQUyygles';
+// Importar credenciales aisladas
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export const encriptarContrasena = (textoPlano) => CryptoJS.SHA256(textoPlano).toString();
 
