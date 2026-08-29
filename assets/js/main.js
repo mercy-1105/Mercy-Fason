@@ -1,6 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 import { store } from './store.js';
-import LoginView from './views/LoginView.js';
+import LoginView from './loginview.js';
 
 // Importar credenciales aisladas
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
