@@ -2,9 +2,22 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { store } from './store.js';
 import LoginView from './loginview.js';
 
+// cargar credenciales desde config.js o desde variables globales
+let url = '';
+let key = '';
 
-// Importar credenciales aisladas
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+try {
+    const config = await import('./config.js');
+    url = config.SUPABASE_URL;
+    key = config.SUPABASE_ANON_KEY;
+} catch (e) {
+    console.warn("No se pudo cargar config.js dinámicamente, verificando variables globales...", e);
+    url = window.SUPABASE_URL || '';
+    key = window.SUPABASE_ANON_KEY || '';
+}
+
+export const SUPABASE_URL = url;
+export const SUPABASE_ANON_KEY = key;
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export const encriptarContrasena = (textoPlano) => CryptoJS.SHA256(textoPlano).toString();
 
