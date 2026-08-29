@@ -1,5 +1,5 @@
-import { store } from '../store.js';
-import { supabase, encriptarContrasena } from '../main.js';
+import { store } from './store.js';
+import { supabase, encriptarContrasena } from './main.js';
 const { ref } = Vue;
 
 export default {

@@ -2,6 +2,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { store } from './store.js';
 import LoginView from './loginview.js';
 
+
 // Importar credenciales aisladas
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
