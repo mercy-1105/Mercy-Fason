@@ -159,9 +159,23 @@ const app = createApp({
 
         const pagosFiltrados = computed(() => {
             return store.baseDatos.pagos.filter(pagoEnBuscador => {
+                
+                // 1. RESTRICCIÓN DE VISIBILIDAD POR ROL (Solo ven sus propios pagos)
+                if (store.usuarioActual?.rol !== 'admin') {
+                    const miPerfilComoEmpleado = store.baseDatos.empleados.find(emp => emp.usuario_id === store.usuarioActual.id);
+                    const turnoDelPago = store.baseDatos.turnos.find(t => t.id === pagoEnBuscador.turno_id);
+                    
+                    // Si el usuario no tiene perfil de empleado vinculado, o si el turno le pertenece a otro empleado, se oculta
+                    if (!miPerfilComoEmpleado || !turnoDelPago || turnoDelPago.empleado_id !== miPerfilComoEmpleado.id) {
+                        return false;
+                    }
+                }
+
+                // 2. FILTROS DE BÚSQUEDA ORIGINALES
                 const textoParaBuscar = filtrosBusqueda.value.pago.search.toLowerCase();
                 const encajaConMetodo = filtrosBusqueda.value.pago.metodo === '' || pagoEnBuscador.metodo_pago === filtrosBusqueda.value.pago.metodo;
                 let estaDentroDeRango = true;
+                
                 if (pagoEnBuscador.creado_en) {
                     const fechaDelPago = new Date(pagoEnBuscador.creado_en);
                     if (filtrosBusqueda.value.pago.fechaInicio) {
@@ -173,12 +187,14 @@ const app = createApp({
                         if (fechaDelPago > limiteSuperior) estaDentroDeRango = false;
                     }
                 }
+                
                 let encajaConTexto = true;
                 if (textoParaBuscar !== '') {
                     const descripcionTurnoViculado = obtenerDetalleTurno(pagoEnBuscador.turno_id).toLowerCase();
                     const detalleReferencia = (pagoEnBuscador.referencia || '').toLowerCase();
                     encajaConTexto = descripcionTurnoViculado.includes(textoParaBuscar) || detalleReferencia.includes(textoParaBuscar);
                 }
+                
                 return encajaConTexto && encajaConMetodo && estaDentroDeRango;
             }).sort((a, b) => new Date(b.creado_en) - new Date(a.creado_en));
         });
