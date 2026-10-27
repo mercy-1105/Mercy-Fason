@@ -86,9 +86,11 @@ const app = createApp({
         filtrosBusqueda.value.reportes.inicio = inicioDeEsteMes.toISOString().split('T')[0];
         filtrosBusqueda.value.reportes.fin = fechaDeHoy.toISOString().split('T')[0];
 
-        const cargarInformacionBaseDatos = async () => {
-            store.cargandoSistema = true;
-            store.mensajeSistema = "Buscando y organizando tu información...";
+        const cargarInformacionBaseDatos = async (silencioso = false) => {
+            if (!silencioso) {
+                store.cargandoSistema = true;
+                store.mensajeSistema = "Buscando y organizando tu información...";
+            }
             try {
                 const listadoTablasDescargar = ['usuarios', 'clientes', 'empleados', 'turnos', 'servicios', 'pagos', 'turno_servicios'];
                 for (const nombreDeEsaTabla of listadoTablasDescargar) {
@@ -98,9 +100,9 @@ const app = createApp({
                 }
             } catch (errorAlConectar) {
                 console.error("Error al obtener la info:", errorAlConectar);
-                store.mensajeSistema = "Hubo un error cargando los datos. Revisa la consola.";
+                if (!silencioso) store.mensajeSistema = "Hubo un error cargando los datos. Revisa la consola.";
             } finally {
-                store.cargandoSistema = false;
+                if (!silencioso) store.cargandoSistema = false;
             }
         };
 
@@ -113,6 +115,9 @@ const app = createApp({
             vistaActual.value = nuevaVista;
             menuLateralAbierto.value = false; 
             filtrosBusqueda.value.generic = { search: '', estado: '' }; 
+            
+            // Actualizar datos en segundo plano al cambiar de pantalla
+            cargarInformacionBaseDatos(true);
         };
         
         const limpiarFiltros = (cualFiltro) => { 
