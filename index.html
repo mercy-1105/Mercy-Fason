@@ -397,7 +397,7 @@
                                 <button @click="descargarPagosExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a formato nativo de Excel (.xlsx)">
                                     <i class="fa-solid fa-file-excel"></i> Excel
                                 </button>
-                                <button @click="abrirVentanaEmergente('pago')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                <button v-if="usuarioActual?.rol === 'admin'" @click="abrirVentanaEmergente('pago')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
                                     <i class="fa-solid fa-plus"></i> Registrar Pago
                                 </button>
                             </div>
@@ -458,13 +458,17 @@
                                             <td class="px-6 py-4 text-sm text-slate-600">
                                                 {{ pagoRegistrado.referencia || '-' }}
                                             </td>
-                                            <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
-                                                <button @click="abrirVentanaEmergente('pago', pagoRegistrado)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
-                                                    <i class="fa-solid fa-pen text-xs"></i>
-                                                </button>
-                                                <button @click="pedirConfirmacionEliminar('pagos', pagoRegistrado.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
-                                                    <i class="fa-solid fa-trash text-xs"></i>
-                                                </button>
+                                           <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
+                                                <template v-if="usuarioActual?.rol === 'admin'">
+                                                    <button @click="abrirVentanaEmergente('pago', pagoRegistrado)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
+                                                        <i class="fa-solid fa-pen text-xs"></i>
+                                                    </button>
+                                                    <button @click="pedirConfirmacionEliminar('pagos', pagoRegistrado.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
+                                                        <i class="fa-solid fa-trash text-xs"></i>
+                                                    </button>
+                                                </template>
+                                                <!-- Opcional: Mensaje o icono para staff/recepción indicando que solo pueden ver -->
+                                                <span v-else class="text-xs text-slate-400 italic">Solo lectura</span>
                                             </td>
                                         </tr>
                                         <tr v-if="pagosFiltrados.length === 0">
