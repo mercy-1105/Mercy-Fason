@@ -626,7 +626,7 @@
                                 <button @click="exportarArchivo(vistaActual, 'excel')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a Formato Excel">
                                     <i class="fa-solid fa-file-excel"></i> Excel
                                 </button>
-                                <button @click="abrirVentanaEmergente(vistaActual.slice(0,-1))" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                <button v-if="!(vistaActual === 'servicios' && usuarioActual?.rol === 'staff')" @click="abrirVentanaEmergente(vistaActual.slice(0,-1))" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
                                     <i class="fa-solid fa-plus"></i> Nuevo Registro
                                 </button>
                             </div>
@@ -1096,7 +1096,7 @@
     </transition>
 </div>
 
-<!-- Llama a tu archivo JS externo aquí -->
+<!-- JS externo -->
 <script type="module" src="./assets/js/main.js"></script>
 
 </body>
