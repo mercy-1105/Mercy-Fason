@@ -467,7 +467,6 @@
                                                         <i class="fa-solid fa-trash text-xs"></i>
                                                     </button>
                                                 </template>
-                                                <!-- Opcional: Mensaje o icono para staff/recepción indicando que solo pueden ver -->
                                                 <span v-else class="text-xs text-slate-400 italic">Solo lectura</span>
                                             </td>
                                         </tr>
@@ -709,14 +708,16 @@
                                                 <span v-if="registroInterno.activo" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Activo</span>
                                                 <span v-else class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
                                             </td>
-                                            
                                             <td class="px-6 py-4 text-right whitespace-nowrap sticky right-0 bg-white/95 group-hover:bg-slate-50/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)] z-10">
-                                                <button @click="abrirVentanaEmergente(vistaActual.slice(0,-1), registroInterno)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
-                                                    <i class="fa-solid fa-pen text-xs"></i>
-                                                </button>
-                                                <button @click="pedirConfirmacionEliminar(vistaActual, registroInterno.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
-                                                    <i class="fa-solid fa-trash text-xs"></i>
-                                                </button>
+                                                <template v-if="!(vistaActual === 'servicios' && usuarioActual?.rol === 'staff')">
+                                                    <button @click="abrirVentanaEmergente(vistaActual.slice(0,-1), registroInterno)" class="w-8 h-8 rounded bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors mx-1" title="Editar">
+                                                        <i class="fa-solid fa-pen text-xs"></i>
+                                                    </button>
+                                                    <button @click="pedirConfirmacionEliminar(vistaActual, registroInterno.id)" class="w-8 h-8 rounded bg-red-50 text-red-500 hover:bg-red-100 transition-colors mx-1" title="Eliminar">
+                                                        <i class="fa-solid fa-trash text-xs"></i>
+                                                    </button>
+                                                </template>
+                                                <span v-else class="text-xs text-slate-400 italic">Solo lectura</span>
                                             </td>
                                         </tr>
                                         <tr v-if="listaGenericaFiltrada.length === 0">
