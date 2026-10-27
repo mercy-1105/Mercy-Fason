@@ -397,7 +397,7 @@
                                 <button @click="descargarPagosExcel" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2" title="Exportar a formato nativo de Excel (.xlsx)">
                                     <i class="fa-solid fa-file-excel"></i> Excel
                                 </button>
-                                <button v-if="usuarioActual?.rol === 'admin'" @click="abrirVentanaEmergente('pago')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
+                                <button v-if="usuarioActual?.rol !== 'staff'" @click="abrirVentanaEmergente('pago')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2 mobile-full-btn">
                                     <i class="fa-solid fa-plus"></i> Registrar Pago
                                 </button>
                             </div>
