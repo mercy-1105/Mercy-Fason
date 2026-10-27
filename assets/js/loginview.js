@@ -55,7 +55,7 @@ export default {
                         <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500 text-white mb-4 shadow-lg shadow-brand-500/30">
                             <i class="fa-solid fa-spa text-3xl"></i>
                         </div>
-                        <h1 class="text-3xl font-bold text-slate-800">Mercy Fason</h1>
+                        <h1 class="text-3xl font-bold text-slate-800">MercyFashion</h1>
                         <p class="text-slate-500 mt-2">Panel de Administración</p>
                     </div>
 
