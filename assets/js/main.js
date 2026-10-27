@@ -546,9 +546,26 @@ const app = createApp({
                 mensajeExito.value = '¡Eliminado correctamente!'; modalActivo.value = 'success';
             } catch (err) { errorFormulario.value = traducirErrorSupabase(err.message); } finally { guardandoDatos.value = false; }
         };
-
-        onMounted(() => { setInterval(() => { if (vistaActual.value === 'dashboard') diapositivaActiva.value = (diapositivaActiva.value + 1) % diapositivasAnuncios.value.length; }, 5000); });
-
+    const activarSincronizacionEnTiempoReal = () => {
+            supabase
+                .channel('cambios-globales')
+                .on(
+                    'postgres_changes', 
+                    { event: '*', schema: 'public' }, 
+                    (payload) => {
+                        // Esto se dispara solo cuando alguien más modifica, inserta o borra algo en la base de datos
+                        cargarInformacionBaseDatos(true);
+                    }
+                )
+                .subscribe();
+        };
+        
+      onMounted(() => { 
+            activarSincronizacionEnTiempoReal(); 
+            setInterval(() => { 
+                if (vistaActual.value === 'dashboard') diapositivaActiva.value = (diapositivaActiva.value + 1) % diapositivasAnuncios.value.length; 
+            }, 5000); 
+        });
         // Gracias a toRefs, exportamos todas las variables del Store de manera que el HTML no se dé cuenta del cambio
         return {
             ...toRefs(store), guardandoDatos, errorFormulario, mensajeExito, menuLateralAbierto, vistaActual, diapositivaActiva, diapositivasAnuncios, modalActivo, modoEdicion, datosDelFormulario, elementoAEliminar, mostrarContrasena, mostrarConfirmacionContrasena, filtrosBusqueda, plantillaWhatsAppGuardada, empleadosActivos, estadisticasGenerales, ultimasAtenciones, datosTablaActual, turnosFiltrados, pagosFiltrados, listaGenericaFiltrada, citasCompletadas, datosReporte,
