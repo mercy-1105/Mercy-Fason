@@ -553,11 +553,13 @@ const app = createApp({
                     'postgres_changes', 
                     { event: '*', schema: 'public' }, 
                     (payload) => {
-                        // Esto se dispara solo cuando alguien más modifica, inserta o borra algo en la base de datos
+                        console.log("🔥 ¡Cambio detectado en la base de datos!", payload);
                         cargarInformacionBaseDatos(true);
                     }
                 )
-                .subscribe();
+                .subscribe((estado) => {
+                    console.log("📡 Estado de conexión en tiempo real:", estado);
+                });
         };
         
       onMounted(() => { 
