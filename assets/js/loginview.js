@@ -89,7 +89,7 @@ export default {
                         </button>
                         
                         <div class="text-xs text-center text-slate-500 mt-4 px-2">
-                            Proyecto de tesis <strong> Asignación de Turnos</strong> salón de belleza. Elaborado por <strong> Mercy Jaramillo. </strong>
+                            Elaborado por <strong> Mercy Jaramillo. </strong>
                         </div>
                     </form>
                 </div>
